@@ -103,6 +103,6 @@ def write_to_new(conn,table_name,start_id):
 conn =  sql.connect("DB\\top_250_movie_quotes.db")
 # create_simple_table()
 table_name = "parsed_quotes_db"
-write_to_new(conn,table_name,31)
+write_to_new(conn,table_name,59)
 
 

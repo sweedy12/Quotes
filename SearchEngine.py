@@ -21,7 +21,7 @@ def pyGoogleSearch(query):
     print(phrase_extract.text)
 
 
-pyGoogleSearch("huji")
+# pyGoogleSearch("huji")
 
 def get_query_total_results(query):
     """
