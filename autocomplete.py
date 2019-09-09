@@ -32,13 +32,15 @@ def find_best_match(lines,movie_name,qs):
     best_lines = []
     min_position = 11
     for line in lines:
+        if (line ==""):
+            continue
         #removing punctuation and getting the required number of words:
         l = re.sub(PUNCT_REG," ", line)
         l2 = l.split()
         s = min(len(l2),qs)
-        q1 = "\"" + sep.join(l2[:s]) +"\""
+        q1 = sep.join(l2[:s])
         #preparing the query and getting the autocomplete results.
-        query = "\""+movie_name+"\""+" "+ q1
+        query = movie_name+" "+ q1
         auto_comp = get_autocomplete(query)
         #finding the best match from the autocomplete matches:
         min_edit_dist = np.inf
@@ -56,7 +58,7 @@ def find_best_match(lines,movie_name,qs):
         #checking if the current best match has better position:
         if (min_position > best_ind):
             min_position = best_ind
-            best_lines = [(cur_best_suggest,min_edit_dist)]
+            best_lines = [(line,min_edit_dist)]
         elif (min_position == best_ind):
             best_lines.append((cur_best_suggest, min_edit_dist))
     return best_lines
@@ -81,9 +83,9 @@ def levenshteinDistance(s1, s2):
         distances = distances_
     return distances[-1]
 
-movie_name = "godfather"
-lines = ["i'm gonna make him an offer", "oh danny boy the winds are calling", "ain't no sunshine when she's gone"]
-find_best_match(lines, movie_name, 2)
+# movie_name = "godfather"
+# lines = ["i'm gonna make him an offer", "oh danny boy the winds are calling", "ain't no sunshine when she's gone"]
+# find_best_match(lines, movie_name, 2)
 
 
 def write_query_to_table(conn,table_name,query):

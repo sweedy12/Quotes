@@ -1,6 +1,8 @@
 import sqlite3 as sql
 import regex as re
 import SearchEngine as se
+import autocomplete as ac
+import numpy as np
 
 SCRIPT_NOTES_REG = "\\s*\\[.*\\]\\s*"
 INTERESTING_REG  = "\\s*[\\d,]+\\s*of\\s*[\\d,]+\\s*found\\s*this\\s*interesting.*"
@@ -10,7 +12,93 @@ TOTAL_ID = 7364
 
 
 
-def parse_table_row(row, quote_id):
+def quote_to_list(quote):
+    """
+
+    :param quote:
+    :return:
+    """
+    quote = re.sub(SCRIPT_NOTES_REG,"",quote)
+    quote = re.sub("\\s*\n\s*\n\s*","\n", quote)
+    quote = re.sub("\\s*:\\s*\n",":",quote)
+    quote = quote.split("\n")
+    return quote
+
+
+
+def process_quote_list(quote_list):
+    """
+
+    :param quote_list:
+    :return:
+    """
+    new_quote_list = []
+    quote_str = ""
+    #going over all lines, to see what score they get, and whether we are done:
+    for line in quote_list:
+        if (line == ""):
+
+            continue
+        #checking if we reached the end:
+        m = INTERESTING_REG_PATTERN.match(line)
+        if (m): #reached the end of the quote
+            break
+        else:
+            quote_str += line+"\n"
+            #removing the character name from the quote
+            id = line.find(":") + 1
+            new_quote_list.append(line[id:])
+    return (new_quote_list,quote_str)
+
+
+def get_best_line(best_lines):
+    """
+
+    :param best_lines:
+    :return:
+    """
+    min_dist = np.inf
+    best_ind = []
+    for i in range(len(best_lines)):
+        cur_dist = best_lines[i][1]
+        if (cur_dist < min_dist):
+            min_dist = cur_dist
+            best_ind = [i]
+        elif (cur_dist == min_dist): #multiple choices
+            best_ind.append(i)
+    #getting the best lines, and their editing distance:
+    lines = [best_lines[i][0] for i in best_ind]
+    distances = [str(best_lines[i][1]) for i in best_ind]
+    #transferring into strings
+
+    lines_str = "\n".join(lines)
+    dist_str = "\n".join(distances)
+    return (lines_str, dist_str)
+
+
+def parse_autocomplete_table_row(row,quote_id,qs):
+    """
+    :param row:
+    :param quote_id:
+    :param qs:
+    :return:
+    """
+    quote = row[1]
+    movie_name = row[2]
+    quote_list = quote_to_list(quote)
+    #getting the processed quote_list and string
+    quote_list,quote_str = process_quote_list(quote_list)
+    #getting the best line and its editing distance
+    best_lines = ac.find_best_match(quote_list,movie_name,qs)
+    lines_str,dist_str = get_best_line(best_lines)
+    return (None,None,None)
+
+
+
+
+
+
+def parse_search_table_row(row, quote_id):
     """
 
     :param row:
@@ -19,10 +107,7 @@ def parse_table_row(row, quote_id):
     """
     quote = row[1]
     movie_name = row[2]
-    quote = re.sub(SCRIPT_NOTES_REG,"",quote)
-    quote = re.sub("\\s*\n\s*\n\s*","\n", quote)
-    quote = re.sub("\\s*:\\s*\n",":",quote)
-    quote = quote.split("\n")
+    quote = quote_to_list(quote)
     quote_str = ""
     max_searches = 0
     max_line = ""
@@ -53,7 +138,7 @@ def parse_table_row(row, quote_id):
 
 
 
-def write_to_table(conn,table_name,row,quote_str,max_line, max_searches):
+def write_to_search_table(conn,table_name,row,quote_str,max_line, max_searches):
     """
 
     :param conn:
@@ -90,12 +175,21 @@ def create_simple_table():
     conn.commit()
 
 
-def write_to_new(conn,table_name,start_id):
+def write_to_search_db(conn,table_name,start_id):
     for i in range(start_id,TOTAL_ID):
         table = conn.execute("SELECT * FROM top_quotes_db WHERE id="+str(i))
         for row in table:
-            (quote_str,max_line,max_searches) = parse_table_row(row,i)
-            write_to_table(conn,table_name,row,quote_str,max_line,max_searches)
+            (quote_str,max_line,max_searches) = parse_search_table_row(row,i)
+            write_to_search_table(conn,table_name,row,quote_str,max_line,max_searches)
+
+
+def write_to_auto_complete_db(conn,table_name,start_id):
+    for i in range(start_id,TOTAL_ID):
+        table = conn.execute("SELECT * FROM top_quotes_db WHERE id="+str(i))
+        for row in table:
+            (quote_str,max_line,max_searches) = parse_autocomplete_table_row(row,i,3)
+
+
 
 
 
@@ -103,6 +197,7 @@ def write_to_new(conn,table_name,start_id):
 conn =  sql.connect("DB\\top_250_movie_quotes.db")
 # create_simple_table()
 table_name = "parsed_quotes_db"
-write_to_new(conn,table_name,59)
+# write_to_search_db(conn,table_name,59)
+write_to_auto_complete_db(conn,table_name,0)
 
 
