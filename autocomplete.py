@@ -2,6 +2,12 @@
 import requests
 import json
 import sqlite3 as sql
+import string
+import re
+import numpy as np
+
+PUNCT_REG = "[,.\"]"
+
 
 def get_autocomplete(query):
     URL = "http://suggestqueries.google.com/complete/search?client=firefox&q="+query
@@ -10,6 +16,74 @@ def get_autocomplete(query):
     result = json.loads(response.content.decode('utf-8'))
     return result[1]
 
+
+
+
+
+def find_best_match(lines,movie_name,qs):
+    """
+    this function finds the best match
+    :param lines: a list of lines to search
+    :param movie_name: the name of the movie the lines are taken from
+    :param qs: an integer, defining how many words to search from each line
+    :return:
+    """
+    sep = " "
+    best_lines = []
+    min_position = 11
+    for line in lines:
+        #removing punctuation and getting the required number of words:
+        l = re.sub(PUNCT_REG," ", line)
+        l2 = l.split()
+        s = min(len(l2),qs)
+        q1 = "\"" + sep.join(l2[:s]) +"\""
+        #preparing the query and getting the autocomplete results.
+        query = "\""+movie_name+"\""+" "+ q1
+        auto_comp = get_autocomplete(query)
+        #finding the best match from the autocomplete matches:
+        min_edit_dist = np.inf
+        best_ind = -1
+        for i in range(len(auto_comp)):
+            sug = auto_comp[i]
+            sug = re.sub(PUNCT_REG, " ", sug)
+            cur_dist = levenshteinDistance(l,sug)
+            if (cur_dist < min_edit_dist):
+                best_ind = i
+                min_edit_dist = cur_dist
+        if (best_ind == -1):
+            continue
+        cur_best_suggest = auto_comp[best_ind]
+        #checking if the current best match has better position:
+        if (min_position > best_ind):
+            min_position = best_ind
+            best_lines = [(cur_best_suggest,min_edit_dist)]
+        elif (min_position == best_ind):
+            best_lines.append((cur_best_suggest, min_edit_dist))
+    return best_lines
+
+
+
+
+
+
+def levenshteinDistance(s1, s2):
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+
+    distances = range(len(s1) + 1)
+    for i2, c2 in enumerate(s2):
+        distances_ = [i2+1]
+        for i1, c1 in enumerate(s1):
+            if c1 == c2:
+                distances_.append(distances[i1])
+            else:
+                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+        distances = distances_
+    return distances[-1]
+
+movie_name = "godfather"
+lines = ["i'm gonna make him an offer", "oh danny boy the winds are calling", "ain't no sunshine when she's gone"]
+find_best_match(lines, movie_name, 2)
 
 
 def write_query_to_table(conn,table_name,query):
@@ -58,5 +132,3 @@ def create_simple_table():
         AUTO10    TEXT);''')
     conn.commit()
 
-queries = ["Bibi","hebrew","quent"]
-update_autocomp_table("test_db",queries)
