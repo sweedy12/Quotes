@@ -6,7 +6,7 @@ import string
 import re
 import numpy as np
 
-PUNCT_REG = "[,.\"]"
+PUNCT_REG = "[,.\"\'-]"
 
 
 def get_autocomplete(query):

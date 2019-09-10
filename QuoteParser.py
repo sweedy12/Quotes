@@ -6,6 +6,7 @@ import numpy as np
 
 SCRIPT_NOTES_REG = "\\s*\\[.*\\]\\s*"
 INTERESTING_REG  = "\\s*[\\d,]+\\s*of\\s*[\\d,]+\\s*found\\s*this\\s*interesting.*"
+SENTENCE_REG = "\\.{3}|[!?\\.]"
 
 INTERESTING_REG_PATTERN = re.compile(INTERESTING_REG)
 TOTAL_ID = 7364
@@ -26,9 +27,11 @@ def quote_to_list(quote):
 
 
 
+
+
 def process_quote_list(quote_list):
     """
-
+    This function gets a list, in which each cell is a line in the quote, and processes it to remove end of quote notes.
     :param quote_list:
     :return:
     """
@@ -37,7 +40,6 @@ def process_quote_list(quote_list):
     #going over all lines, to see what score they get, and whether we are done:
     for line in quote_list:
         if (line == ""):
-
             continue
         #checking if we reached the end:
         m = INTERESTING_REG_PATTERN.match(line)
@@ -50,6 +52,20 @@ def process_quote_list(quote_list):
             new_quote_list.append(line[id:])
     return (new_quote_list,quote_str)
 
+
+def get_quote_list_by_sentence(quote_list):
+    """
+
+    :param quote_list:
+    :return:
+    """
+    sentence_list = []
+    for quote in quote_list: #going over all quotes
+        sent_list = re.split(SENTENCE_REG, quote)
+        for sent in sent_list:
+            if (sent != ""):
+                sentence_list.append(sent)
+    return sentence_list
 
 def get_best_line(best_lines):
     """
@@ -88,8 +104,9 @@ def parse_autocomplete_table_row(row,quote_id,qs):
     quote_list = quote_to_list(quote)
     #getting the processed quote_list and string
     quote_list,quote_str = process_quote_list(quote_list)
+    sent_list = get_quote_list_by_sentence(quote_list)
     #getting the best line and its editing distance
-    best_lines = ac.find_best_match(quote_list,movie_name,qs)
+    best_lines = ac.find_best_match(sent_list,movie_name,qs)
     lines_str,dist_str = get_best_line(best_lines)
     return (None,None,None)
 
@@ -201,3 +218,8 @@ table_name = "parsed_quotes_db"
 write_to_auto_complete_db(conn,table_name,0)
 
 
+# sent = "a very bright boy. i'm gonna make him an offer he can't refuse. to be or not to be? nothing compares to you!"
+#
+# quote_list = quote_to_list(sent)
+# sent_list = get_quote_list_by_sentence(quote_list)
+# print(ac.find_best_match(sent_list,"godfather",3))
