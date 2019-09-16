@@ -6,7 +6,7 @@ import string
 import re
 import numpy as np
 
-PUNCT_REG = "[,.\"\'-]"
+PUNCT_REG = "[,.\"-]"
 
 
 def get_autocomplete(query):
@@ -54,17 +54,47 @@ def find_best_match(lines,movie_name,qs):
                 min_edit_dist = cur_dist
         if (best_ind == -1):
             continue
-        cur_best_suggest = auto_comp[best_ind]
         #checking if the current best match has better position:
         if (min_position > best_ind):
             min_position = best_ind
             best_lines = [(line,min_edit_dist)]
         elif (min_position == best_ind):
-            best_lines.append((cur_best_suggest, min_edit_dist))
+            best_lines.append((line, min_edit_dist))
     return best_lines
 
-
-
+def find_best_triple_match(triples,movie_name,trip_dict):
+    best_lines = []
+    min_position = 11
+    for trip in triples:
+        if (trip ==""):
+            continue
+        #removing punctuation
+        l = re.sub(PUNCT_REG," ", trip)
+        #preparing the query and getting the autocomplete results.
+        query = movie_name+" "+ l
+        auto_comp = get_autocomplete(query)
+        #finding the best match from the autocomplete matches:
+        min_edit_dist = np.inf
+        best_ind = -1
+        for i in range(len(auto_comp)):
+            sug = auto_comp[i]
+            sug = re.sub(PUNCT_REG, " ", sug)
+            #replacing the movie name in the suggestion string
+            sug = sug.replace(movie_name.lower(),"")
+            sug = sug.replace("the " +movie_name.lower(),"")
+            cur_dist = levenshteinDistance(trip_dict[trip][1],sug)
+            if (cur_dist < min_edit_dist):
+                best_ind = i
+                min_edit_dist = cur_dist
+        if (best_ind == -1):
+            continue
+        #checking if the current best match has better position:
+        if (min_position > best_ind):
+            min_position = best_ind
+            best_lines = [(trip,min_edit_dist)]
+        elif (min_position == best_ind):
+            best_lines.append((trip, min_edit_dist))
+    return best_lines
 
 
 
